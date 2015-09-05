@@ -1,0 +1,81 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'com.github.j2objccontrib.j2objcgradle'
+
+sourceCompatibility = 1.7
+version = '1.0'
+
+eclipse {
+  classpath {
+     downloadSources=true
+     downloadJavadoc=true
+  }
+}
+
+buildscript {
+  repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+      url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+    maven {
+      url uri('../../0Gradle-Repo')
+    }
+  }
+  dependencies {
+    classpath 'com.jimdo.gradle:gradle-apt-plugin:0.5-SNAPSHOT'
+    classpath files('/Users/mg/Downloads/j2objc-gradle/build/libs/j2objc-gradle-0.4.3-alpha-SNAPSHOT.jar')
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    name = "sonatype"
+    url = "https://oss.sonatype.org/content/repositories/snapshots/"
+  }
+  maven {
+    name = "sonatypeGoogle"
+    url = "https://oss.sonatype.org/content/repositories/google-snapshots/"
+  }
+  flatDir {
+    dirs 'lib'
+  }
+}
+
+ 
+
+dependencies {	 
+	compile 'com.google.guava:guava:18.0'
+	compile 'javax.inject:javax.inject:1'
+    compile 'org.json:json:20140107'
+  	compile 'com.google.dagger:dagger:2.0.1'
+    compile 'com.google.j2objc:j2objc-annotations:0.9.8'
+}
+
+// J2ObjC Plugin settings:
+j2objcConfig {
+
+  	translateArgs "--no-package-directories"
+  	translateArgs "-use-arc"
+  	translateArgs "--doc-comments"
+  	translateArgs "--generate-deprecated"
+
+	extraObjcCompilerArgs '-fobjc-arc'
+
+//	translateJ2objcLibs = ["j2objc_annotations.jar", "j2objc_guava.jar", "javax.inject-1.jar", "jsr305-3.0.0.jar", "jre_emul.jar"]
+	linkJ2objcLibs = ['guava', 'j2objc_main', 'javax_inject', 'jsr305', 'jre_emul']
+	
+
+    testMinExpectedTests 0
+
+	filenameCollisionCheck = true
+
+	cycleFinderArgs '--whitelist', '/Applications/J2Objc/j2objc-sorce/jre_emul/cycle_whitelist.txt'
+	cycleFinderArgs '--sourcefilelist', '/Applications/J2Objc/j2objc-sorce/jre_emul/build_result/java_sources.mf'
+	cycleFinderExpectedCycles 0
+
+    finalConfigure()          // Must be last call to configuration
+}
+

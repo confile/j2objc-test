@@ -1,0 +1,155 @@
+apply plugin: 'java'
+apply plugin: 'apt'
+apply plugin: 'eclipse'
+apply plugin: 'com.github.j2objccontrib.j2objcgradle'
+
+sourceCompatibility = 1.7
+version = '1.0'
+
+eclipse {
+  classpath {
+     downloadSources=true
+     downloadJavadoc=true
+  }
+}
+
+buildscript {
+  repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+      url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+    maven {
+      url uri('../../0Gradle-Repo')
+    }
+  }
+  dependencies {
+    classpath 'com.jimdo.gradle:gradle-apt-plugin:0.5-SNAPSHOT'
+    classpath files('/Users/mg/Downloads/j2objc-gradle/build/libs/j2objc-gradle-0.4.3-alpha-SNAPSHOT.jar')
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    name = "sonatype"
+    url = "https://oss.sonatype.org/content/repositories/snapshots/"
+  }
+  maven {
+    name = "sonatypeGoogle"
+    url = "https://oss.sonatype.org/content/repositories/google-snapshots/"
+  }
+  flatDir {
+    dirs 'lib'
+  }
+}
+
+
+sourceSets {
+  src {
+    main{
+      java{
+        srcDir 'build/source/apt'
+        srcDir 'build/source/base'
+      }
+    }
+  }
+}
+
+
+dependencies {
+	apt (project(':base'))
+  	apt 'com.google.auto.factory:auto-factory:1.0-beta2'
+  	apt 'com.google.dagger:dagger:2.0.1'
+  	apt 'com.google.dagger:dagger-producers:2.0-beta'
+  	apt 'com.google.dagger:dagger-compiler:2.0.1'
+
+    compile (project(':base'))
+	compile 'com.google.guava:guava:18.0'
+	compile 'javax.inject:javax.inject:1'
+    compile 'org.json:json:20140107'
+
+  	compile 'com.google.auto.factory:auto-factory:1.0-beta2'
+  	compile 'com.google.auto.service:auto-service:1.0-rc2'
+  	compile 'com.google.dagger:dagger:2.0.1'
+    compile 'com.google.j2objc:j2objc-annotations:0.9.8'
+
+    compile name: 'jre_emul'
+  //  compile 'com.google.android:android:4.1.1.4'
+
+ //  j2objcLinkage project(':base')
+//	j2objcLinkage project(':shared-prebuild')
+}
+
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+  description "Create source jar."
+  classifier = 'sources'
+  from(sourceSets.main.allSource) 
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+  description "Create javadocs."
+  classifier = 'javadoc'
+  from javadoc.destinationDir
+}
+
+artifacts {
+  archives sourcesJar
+//  archives sourcesProcessorJar
+//  archives javadocJar
+}
+
+
+task copyBaseSources(type: Copy) {
+  description "Copy all source files from majestella-base into the current project."
+  exclude '**/*processor*'  // Annotation Processors should not be copied and translated
+  from project(":base").projectDir.toString() + "/src/main/java"
+  into project.projectDir.toString() + "/build/source/base"
+}
+
+tasks.j2objcTranslate.dependsOn += copyBaseSources
+ 
+
+// J2ObjC Plugin settings:
+j2objcConfig {
+    xcodeProjectDir '../ios'  // Xcode workspace directory (suggested directory name)
+    xcodeTarget 'Majestella'     // iOS app target name (replace with existing app name)
+
+    generatedSourceDirs "build/source/apt", "build/source/base"
+  
+    
+    translateClasspaths "lib/json-20140107.jar", "lib/javax.inject-1.jar", "lib/auto-factory-1.0-beta2.jar", "lib/auto-service-1.0-rc2.jar", "lib/javawriter-2.5.1.jar" //, "lib/guava-18.0.jar"
+
+	translateSourcepaths "lib/dagger-2.0.1-sources.jar" 
+	
+	//autoConfigureDeps = true
+
+  	translateArgs "--no-package-directories"
+  	translateArgs "--prefixes", "prefixes.properties"
+  	translateArgs "-use-arc"
+  	translateArgs "--doc-comments"
+//  	translateArgs "--build-closure"
+  	translateArgs "--generate-deprecated"
+
+	extraObjcCompilerArgs '-fobjc-arc'
+
+//	translateJ2objcLibs = ["j2objc_annotations.jar", "j2objc_guava.jar", "javax.inject-1.jar", "jsr305-3.0.0.jar", "jre_emul.jar"]
+	linkJ2objcLibs = ['guava', 'j2objc_main', 'javax_inject', 'jsr305', 'jre_emul']
+	
+	translatePattern {  
+    	exclude '**/*processor*'
+    }
+
+    testMinExpectedTests 0
+
+	filenameCollisionCheck = true
+
+	cycleFinderArgs '--whitelist', '/Applications/J2Objc/j2objc-sorce/jre_emul/cycle_whitelist.txt'
+	cycleFinderArgs '--sourcefilelist', '/Applications/J2Objc/j2objc-sorce/jre_emul/build_result/java_sources.mf'
+	cycleFinderExpectedCycles 0
+
+    finalConfigure()          // Must be last call to configuration
+}
+
